@@ -1,0 +1,17 @@
+{
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "editor.codeActionsOnSave": {
+    //保存文件时会运行prettier格式化代码(ts/tsx)
+    //同进会依据eslint对typescript的验证规则修复语法
+    "source.fixAll.eslint": true,
+    "source.fixAll.stylelint": true
+  }
+}
