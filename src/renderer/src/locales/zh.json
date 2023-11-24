@@ -1,0 +1,8 @@
+{
+    "dhforce.menu.project": " 项目管理",
+    "dhforce.menu.robots": "机器人管理",
+    "dhforce.menu.robots.config": "机器人配置",
+    "dhforce.menu.mission": "任务调度",
+    "dhforce.menu.mission.timer": "定时任务",
+    "dhforce.menu.system": "系统设置"
+}

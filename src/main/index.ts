@@ -1,16 +1,33 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 let mainWindow: BrowserWindow | null = null
+//渲染进程和主进程通信,主进程使用 ipcMain.on 监听
+ipcMain.on('pintop-message', (event, arg) => {
+  // 'event' 对象包含了与此事件相关的信息，比如发送消息的窗口
+  // 'arg' 是从渲染进程发送的数据，这里应该是 'hello'
+  console.log(`Message received: ${arg}`, typeof arg)
+  mainWindow?.setAlwaysOnTop(arg)
+})
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1300,
     height: 670,
-    show: false,
+    // width: 1280, //mac 14'' width
+    // height: 832, //mac 14'' height
+    minWidth: 1300,
+    minHeight: 670,
+    minimizable: true,
+    maximizable: true,
+    closable: true,
+    movable: true,
+    //alwaysOnTop: isPinTop, 初始值可以这样使用
+    // titleBarStyle: 'hiddenInset',
     autoHideMenuBar: true,
+    // backgroundColor: '#f00',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -30,10 +47,11 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-    // Test actively push message to the Electron-Renderer
-    mainWindow.webContents.on('did-finish-load', () => {
-      mainWindow?.webContents.send('main-process-message', new Date().toLocaleString())
-    })
+  // Test actively push message to the Electron-Renderer
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.send('main-process-message', new Date().toLocaleString())
+    //接收 render process 发送过来的pinTop
+  })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -50,7 +68,8 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-
+  //set appName
+  app.setName('SLAM pgmXT')
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
@@ -76,5 +95,10 @@ app.on('window-all-closed', () => {
   }
 })
 
+// app.dock.setBadge('SLAM pgmXT')
+//export default mainWindow
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+
+//不用自己处理window max/min/close
+// import './window-resize'

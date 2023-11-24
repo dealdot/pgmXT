@@ -10,6 +10,14 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    //配置less
+    css: {
+      preprocessorOptions: {
+        less: {
+          javascriptEnabled: true // 支持内联 JavaScript
+        }
+      }
+    },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src')

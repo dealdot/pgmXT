@@ -22,7 +22,13 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
-    "electron-updater": "^6.1.1"
+    "@loadable/component": "^5.15.3",
+    "@types/loadable__component": "^5.13.7",
+    "antd": "^5.11.1",
+    "electron-updater": "^6.1.1",
+    "less": "^4.2.0",
+    "react-intl": "^6.5.5",
+    "react-router-dom": "^6.18.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^1.0.1",

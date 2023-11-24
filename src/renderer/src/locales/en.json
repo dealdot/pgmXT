@@ -1,0 +1,8 @@
+{
+    "dhforce.menu.project": "Projects",
+    "dhforce.menu.robots": "Robots",
+    "dhforce.menu.robots.config": "Configuration",
+    "dhforce.menu.mission": "Task Scheduling",
+    "dhforce.menu.mission.timer": "Timed Tasks",
+    "dhforce.menu.system": "System Settings"
+}

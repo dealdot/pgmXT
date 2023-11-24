@@ -1,0 +1,8 @@
+{
+    "dhforce.menu.project": "Gestión de Proyectos",
+    "dhforce.menu.robots": "Gestión de Robots",
+    "dhforce.menu.robots.config": "Configuración de Robots",
+    "dhforce.menu.mission": "Programación de Tareas",
+    "dhforce.menu.mission.timer": "Tareas Programadas",
+    "dhforce.menu.system": "Configuración del Sistema"
+}
