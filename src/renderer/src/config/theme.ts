@@ -9,8 +9,8 @@ export enum ThemeMode {
   Dark = 'dark'
 }
 
-export const token: Partial<GlobalToken> = {
-  colorPrimary: '#409eff', // "#00b96b", a5d306 51da4c
+export const themeToken: Partial<GlobalToken> = {
+  colorPrimary: '#00b96b', // "#00b96b", a5d306 51da4c
   fontSize: 14,
   borderRadius: 4,
   wireframe: false
@@ -32,10 +32,10 @@ export const langItems: MenuItem[] = [
   }
 ]
 export const themeItems: MenuItem[] = [
-  {
-    label: '跟随系统',
-    key: 'system'
-  },
+  // {
+  //   label: '跟随系统',
+  //   key: 'system'
+  // },
   {
     label: '明亮模式',
     key: 'light'

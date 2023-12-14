@@ -5,7 +5,7 @@ import icon from '../../resources/icon.png?asset'
 
 let mainWindow: BrowserWindow | null = null
 //渲染进程和主进程通信,主进程使用 ipcMain.on 监听
-ipcMain.on('pintop-message', (event, arg) => {
+ipcMain.on('pintop-message', (event: Electron.IpcMainEvent, arg) => {
   // 'event' 对象包含了与此事件相关的信息，比如发送消息的窗口
   // 'arg' 是从渲染进程发送的数据，这里应该是 'hello'
   console.log(`Message received: ${arg}`, typeof arg)
@@ -32,6 +32,7 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
+      //webSecurity: false,
       nodeIntegration: false, //生产环境时要设置为 false
       contextIsolation: true //生产环境时设置为 true
       //Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
@@ -101,4 +102,23 @@ app.on('window-all-closed', () => {
 // code. You can also put them in separate files and require them here.
 
 //不用自己处理window max/min/close
-// import './window-resize'
+import parseYamlToJson from './yaml-parse'
+
+interface YamlStructure {
+  image?: string
+  resolution: number
+  origin: number[]
+  negate: number
+  occupied_thresh: number
+  free_thresh: number
+}
+
+ipcMain.handle('parse-yaml-file', async (event: Electron.IpcMainInvokeEvent, filePath: string) => {
+  try {
+    // 执行一些异步操作
+    return parseYamlToJson<YamlStructure>(filePath)
+  } catch (error) {
+    console.error('Error parsing YAML file:', error)
+    throw error
+  }
+})

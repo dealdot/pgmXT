@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <title>SLAM pgmXT</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta
+    <!-- <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
-    />
+    /> -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3008; style-src 'self' 'unsafe-inline'">
+
   </head>
 
   <body>

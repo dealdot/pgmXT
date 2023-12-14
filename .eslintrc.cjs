@@ -8,5 +8,7 @@ module.exports = {
   ],
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'off'
+    //关闭 any 警告，但不要随意使用 any
+    //'@typescript-eslint/no-explicit-any': 'off'
   }
 }

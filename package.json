@@ -26,6 +26,7 @@
     "@types/loadable__component": "^5.13.7",
     "antd": "^5.11.1",
     "electron-updater": "^6.1.1",
+    "js-yaml": "^4.1.0",
     "less": "^4.2.0",
     "react-intl": "^6.5.5",
     "react-router-dom": "^6.18.0"

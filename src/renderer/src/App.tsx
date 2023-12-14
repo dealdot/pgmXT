@@ -1,14 +1,21 @@
 import React from 'react'
 import Router from '@renderer/router'
 import { BrowserRouter } from 'react-router-dom'
-import { LanguageProvider } from '@renderer/context/AppSetting'
+import { AppSettingProvider } from '@renderer/context/AppSetting'
 const App: React.FC = () => {
   return (
-    <LanguageProvider>
+    <AppSettingProvider>
       <BrowserRouter>
         <Router />
       </BrowserRouter>
-    </LanguageProvider>
+    </AppSettingProvider>
+    // <LanguageProvider>
+    //   <ThemeProvider>
+    //     <BrowserRouter>
+    //       <Router />
+    //     </BrowserRouter>
+    //   </ThemeProvider>
+    // </LanguageProvider>
   )
 }
 export default App

@@ -1,23 +1,26 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react'
-interface LanguageContextType {
+interface AppSettingContextType {
   language: string
   setLanguage(language: string): void
+  currentTheme: string
+  setCurrentTheme(currentTheme: string): void
 }
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
+const AppSettingContext = createContext<AppSettingContextType | undefined>(undefined)
 
-export const useLanguage = () => {
-  const context = useContext(LanguageContext)
+export const useAppSetting = () => {
+  const context = useContext(AppSettingContext)
   if (!context) {
-    throw new Error(`useLanguage must be used within a LanguageProvider`)
+    throw new Error(`useAppSetting must be used within a AppSettingProvider`)
   }
   return context
 }
 
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AppSettingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<string>('zh')
+  const [currentTheme, setCurrentTheme] = useState<string>('light')
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <AppSettingContext.Provider value={{ language, setLanguage, currentTheme, setCurrentTheme }}>
       {children}
-    </LanguageContext.Provider>
+    </AppSettingContext.Provider>
   )
 }

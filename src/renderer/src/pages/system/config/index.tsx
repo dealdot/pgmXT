@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { DownOutlined } from '@ant-design/icons'
-import { Dropdown, Space, Divider } from 'antd'
+import { Dropdown, Space, Divider, theme } from 'antd'
 import type { MenuProps } from 'antd'
 import { langItems, themeItems } from '@renderer/config/theme'
-import { useLanguage } from '@renderer/context/AppSetting'
+import { useAppSetting } from '@renderer/context/AppSetting'
+
 const AppSetting = () => {
   console.log('app setting111')
-  const [lang, setLang] = useState('简体中文')
-  const [themeText, setThemeText] = useState('跟随系统')
-  const { language, setLanguage } = useLanguage()
+  const [langText, setLangText] = useState('简体中文')
+  const [themeText, setThemeText] = useState('明亮模式')
+  const { language, setLanguage, currentTheme, setCurrentTheme } = useAppSetting()
+  const {
+    token: { colorBgContainer, colorPrimary, colorPrimaryText, colorTextBase }
+  } = theme.useToken()
   const onLangClick: MenuProps['onClick'] = (e: { key: string }) => {
     const langItem = langItems.find((item) => item.key === e.key)
     if (langItem) {
-      setLang(langItem.label)
+      setLangText(langItem.label)
       setLanguage(e.key)
     }
   }
@@ -20,26 +24,33 @@ const AppSetting = () => {
     const themeItem = themeItems.find((item) => item.key === e.key)
     if (themeItem) {
       setThemeText(themeItem.label)
+      setCurrentTheme(e.key)
     }
   }
   useEffect(() => {
     const langItem = langItems.find((item) => item.key === language)
     if (langItem) {
-      setLang(langItem.label)
+      setLangText(langItem.label)
+    }
+    const themeItem = themeItems.find((item) => item.key === currentTheme)
+    if (themeItem) {
+      setThemeText(themeItem.label)
     }
     console.log('app setting22')
     return () => {
-      console.log('app 卸载了')
+      console.log('配置页面卸载了')
     }
-  }, [language])
+  }, [])
   return (
     <>
       <Divider orientation="center" plain>
-        <span className="text-blue-500">基础配置</span>
+        <span style={{ color: colorPrimary }}>基础配置</span>
       </Divider>
       <div className="basic-settings">
         <div className="flex flex-row justify-between px-6">
-          <div className="text-base">语言</div>
+          <div style={{ color: colorTextBase }} className="text-base">
+            语言
+          </div>
           <Dropdown
             menu={{
               items: langItems,
@@ -53,8 +64,8 @@ const AppSetting = () => {
             className=""
           >
             <a onClick={(e) => e.preventDefault()}>
-              <Space size={'small'} className=" text-gray-800">
-                {lang}
+              <Space size={'small'} style={{ color: colorTextBase }}>
+                {langText}
                 <DownOutlined />
               </Space>
             </a>
@@ -62,12 +73,14 @@ const AppSetting = () => {
         </div>
         <Divider />
         <div className="flex flex-row justify-between px-6">
-          <div className="text-base">主题</div>
+          <div style={{ color: colorTextBase }} className="text-base">
+            主题
+          </div>
           <Dropdown
             menu={{
               items: themeItems,
               selectable: true,
-              defaultSelectedKeys: ['system'],
+              defaultSelectedKeys: [currentTheme],
               onClick: onThemeClick
             }}
             trigger={['click']}
@@ -75,7 +88,7 @@ const AppSetting = () => {
             arrow
           >
             <a onClick={(e) => e.preventDefault()}>
-              <Space size={'small'} className=" text-gray-800">
+              <Space size={'small'} style={{ color: colorTextBase }}>
                 {themeText}
                 <DownOutlined />
               </Space>

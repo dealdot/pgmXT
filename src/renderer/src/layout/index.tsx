@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Layout, Menu, Button, theme, ConfigProvider, Tooltip } from 'antd'
-import { ThemeMode, token } from '@renderer/config/theme'
-import { MenuFoldOutlined, MenuUnfoldOutlined, PushpinFilled } from '@ant-design/icons'
+import { useNavigate, Outlet } from 'react-router-dom'
+import { Layout, Menu, theme, ConfigProvider } from 'antd'
+import { ThemeMode, themeToken } from '@renderer/config/theme'
 
 // 组件国际化
 import type { Locale } from 'antd/es/locale'
@@ -21,37 +20,34 @@ import 'dayjs/locale/zh-cn'
 dayjs.locale('zh-cn')
 
 //引入 context
-import { useLanguage } from '@renderer/context/AppSetting'
-const { Header, Content, Sider } = Layout
+import { useAppSetting } from '@renderer/context/AppSetting'
+const { Content, Sider } = Layout
 
 const locales = {
   zh: zhLocale,
   en: enLocale,
   es: esLocale
 }
+
 import Logo from '@renderer/assets/images/logo.png'
 import menuItems from '@renderer/config/menu'
 import './index.less'
-
+//引入组件
+import DHHeader from '@renderer/components/Header'
+import DHFooter from '@renderer/components/Footer'
 const BasicLayout: React.FC = () => {
-  const { language } = useLanguage()
+  console.log('Basic Layout 重新渲染了')
+  const { language, currentTheme } = useAppSetting()
   const navigate = useNavigate()
   const [locale, setLocale] = useState<Locale>(zhCN)
   const [localeMessage, setLocaleMessage] = useState<string>('zh')
-  const [mode, setMode] = useState<string>('light')
+  //父组件中使用的 state,子组件中只负责操作，不要在子组件中再定义 state 了
   const [collapsed, setCollapsed] = useState(false)
-  const [pinTop, setPinTop] = useState(false)
   const {
     token: { colorBgContainer, colorPrimary }
   } = theme.useToken()
-  const onPinTop = (): void => {
-    //send pinTop to main process
-    window.electron.ipcRenderer.send('pintop-message', !pinTop)
-    setPinTop(!pinTop)
-  }
-  const onBreakPoint = (broken: boolean): void => {
-    setCollapsed(broken)
-  }
+  console.log('colorBg', colorBgContainer, colorPrimary)
+
   // const changeLang = (): void => {
   //   setLocale(esES)
   //   setLocaleMessage('es')
@@ -62,6 +58,12 @@ const BasicLayout: React.FC = () => {
     if (e.key) {
       navigate(e.key)
     }
+  }
+  const onBreakPoint = (broken: boolean): void => {
+    setCollapsed(broken)
+  }
+  const handleCollapseChange = (collapse: boolean): void => {
+    setCollapsed(collapse)
   }
   useEffect(() => {
     if (language === 'zh') {
@@ -80,13 +82,13 @@ const BasicLayout: React.FC = () => {
     <IntlProvider locale={localeMessage} messages={locales[localeMessage as keyof typeof locales]}>
       <ConfigProvider
         theme={{
-          token,
+          token: themeToken,
           components: {
             Layout: {
               headerHeight: 32
             }
           },
-          algorithm: mode === ThemeMode.Light ? theme.defaultAlgorithm : theme.darkAlgorithm
+          algorithm: currentTheme === ThemeMode.Light ? theme.defaultAlgorithm : theme.darkAlgorithm
         }}
         locale={locale}
       >
@@ -98,57 +100,35 @@ const BasicLayout: React.FC = () => {
             collapsedWidth={58}
             width={200}
             className="sidebar"
-            style={{ backgroundColor: colorBgContainer }}
             breakpoint="lg"
             onBreakpoint={onBreakPoint}
           >
             {/* border-solid border-2 border-red-500 */}
-            <div className="flex flex-col justify-center items-center py-4">
-              <img src={Logo} width={40} height={40} />
+            <div
+              className={`logo-container flex flex-col justify-center items-center py-4 ${
+                currentTheme === ThemeMode.Light ? 'light' : 'dark'
+              }`}
+            >
+              <img src={Logo} width={46} height={46} />
               <div className="mt-2 text-sm font-medium">pgmXT</div>
             </div>
-            <Menu
-              theme="light"
-              mode="inline"
-              defaultSelectedKeys={['/projects']}
-              items={menuItems}
-              onSelect={onSelect}
-            />
+            <div className="menu-container">
+              <Menu
+                className={currentTheme === ThemeMode.Light ? 'menu-wrapper' : 'menu-wrapper dark'}
+                theme="light"
+                mode="inline"
+                defaultSelectedKeys={['/projects']}
+                items={menuItems}
+                onSelect={onSelect}
+              />
+            </div>
           </Sider>
           <Layout>
-            <Header
-              style={{ backgroundColor: colorBgContainer }}
-              className="flex justify-between p-0"
-            >
-              <Tooltip placement="right" title={collapsed ? '展开' : '收起'}>
-                <Button
-                  type="text"
-                  icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                  onClick={(): void => setCollapsed(!collapsed)}
-                  style={{
-                    fontSize: '14px',
-                    width: 32,
-                    height: 32
-                  }}
-                />
-              </Tooltip>
-              <Tooltip placement="left" title={pinTop ? '取消置顶' : '置顶'}>
-                <Button
-                  type="text"
-                  icon={<PushpinFilled />}
-                  onClick={onPinTop}
-                  style={{
-                    fontSize: '14px',
-                    width: 32,
-                    height: 32,
-                    color: pinTop ? colorPrimary : ''
-                  }}
-                />
-              </Tooltip>
-            </Header>
+            <DHHeader collapsed={collapsed} onCollapseChange={handleCollapseChange} />
             <Content className="content-container">
               <Outlet />
             </Content>
+            <DHFooter />
           </Layout>
         </Layout>
       </ConfigProvider>
