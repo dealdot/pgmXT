@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { EditOutlined, EllipsisOutlined, SettingOutlined, PlusOutlined } from '@ant-design/icons'
 import { Avatar, Card, Flex, FloatButton } from 'antd'
 import card from '@renderer/assets/images/map.png'
@@ -6,13 +6,26 @@ import card from '@renderer/assets/images/map.png'
 import profile from '@renderer/assets/images/logo.png'
 //引入组件
 import CreateProjectForm from '@renderer/components/CreateProject'
+import { getProjects } from '@renderer/api/project'
+import type { ProjectTableColumns } from '@renderer/api/project/type'
 const { Meta } = Card
 
 const Maps: React.FC = () => {
   const [open, setOpen] = useState(false)
+  const [projects, setProjects] = useState<ProjectTableColumns[]>([])
+  useEffect(() => {
+    //组件加载时执行一次
+    getAllProjects()
+  }, [])
+  const getAllProjects = async () => {
+    const results = await getProjects({})
+    if (results.status === 'Success') {
+      setProjects(results.data)
+    }
+    console.log(results.data)
+  }
   const handleAddProject = () => {
     setOpen(true)
-    console.log('Add Project')
   }
 
   return (

@@ -12,9 +12,11 @@ message.config({
 })
 
 //异步加载路由
-const [MapsPage, SystemConfigPage, RobotsPage] = [
+const [ListPage, ControlPage, SystemConfigPage, RobotsPage] = [
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  async () => await import('@renderer/pages/projects/map'),
+  async () => await import('@renderer/pages/projects/list'),
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  async () => await import('@renderer/pages/projects/control'),
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async () => await import('@renderer/pages/system/config'),
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -33,7 +35,8 @@ const RouterComponent = (): JSX.Element => {
       <Route path="/" element={<BasicLayout />}>
         {/* 添加重定向 */}
         <Route index element={<Navigate to="/projects" />} />
-        <Route path="/projects" element={<MapsPage />}></Route>
+        <Route path="/projects" element={<ListPage />}></Route>
+        <Route path="/projects/controlpanel" element={<ControlPage />}></Route>
         <Route path="/robots/r1" element={<RobotsPage />}></Route>
         <Route path="/systems" element={<SystemConfigPage />}></Route>
         <Route path="404" element={<NotFoundPage />} />

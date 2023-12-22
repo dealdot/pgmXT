@@ -1,27 +1,30 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Input, Form, Modal, Button, Upload, message } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import type { UploadChangeParam } from 'antd/es/upload'
 import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface'
 import { createProject } from '@renderer/api/project'
 
-interface Values {
-  title: string
-  description: string
-  modifier: string
-}
-
 interface CollectionCreateFormProps {
   open: boolean
-  //onCreate: (values: Values) => void
   setOpen: (val: boolean) => void
+  reloadProjects: () => void
 }
 
-const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({ open, setOpen }) => {
+const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({
+  open,
+  setOpen,
+  reloadProjects
+}) => {
   const [form] = Form.useForm()
   //存放 fileList
   const [fileList, setFileList] = useState<UploadFile[]>([])
-
+  useEffect(() => {
+    //关闭后重置表单
+    form.resetFields()
+    //清空 FileList 状态
+    setFileList([])
+  }, [open])
   const beforeUpload = (file: RcFile) => {
     const isyml =
       file.type === 'application/x-yaml' || file.type === 'text/yaml' || file.name.endsWith('.yaml')
@@ -41,7 +44,14 @@ const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({ open, setOpen 
     // }
     return isyml || isPGM
   }
+  //自定义上传方法
+  // const handleUpload = (file) => {
+  //   return new Promise((resolve, reject) => {
+  //     const formData = new FormData()
+  //     formData.append('file', file)
 
+  //   })
+  // }
   const handleChange: UploadProps['onChange'] = (info: UploadChangeParam<UploadFile>) => {
     setFileList(info.fileList)
     //这里的逻辑是点击上传文件的时候就调用接口把文件上传，返回一个 url 地址，然后再点击创建的时候把这个
@@ -69,6 +79,8 @@ const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({ open, setOpen 
           message.error('请同时上传 YAML 和 PGM 文件!')
           return
         }
+        const getFile = (extension) =>
+          values.slamFiles.fileList.find((item) => item.name.endsWith(extension))
         //各种校验通过, 调用接口提交到后台
         //1. 收集表单信息，工程名
         //2. 解析上传的 yaml 文件，取一些参数，post 过去的时候要存储在数据库中
@@ -78,50 +90,47 @@ const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({ open, setOpen 
         //当前数据为标题和上传的文件，文件中的 originFileObj 可以获取到原文件的信息
         console.log('当前数据为: ', values.slamFiles.fileList)
         //获取 yaml 文件，并解析 yaml 里的数据存储到数据库
-        const yamlFile = values.slamFiles.fileList.find((item) => item.name.endsWith('.yaml'))
+        const yamlFile = getFile('.yaml')
         //获取上传文件返回的路径存储到数据库，以便查询
-        const pgmFile = values.slamFiles.fileList.find((item) => item.name.endsWith('.pgm'))
+        const pgmFile = getFile('.pgm')
         if (!yamlFile || !pgmFile) {
           console.error('yaml/pgm 不存在.')
-        } else {
-          try {
-            const oriYamlFilePath = yamlFile.originFileObj?.path
-            if (!oriYamlFilePath) {
-              throw new Error('originFileObj 不存在')
-            }
-            //const jsonData = parseYamlToJson<YamlStructure>(oriYamlFilePath)
-            const jsonData = await window.electron.ipcRenderer.invoke(
-              'parse-yaml-file',
-              oriYamlFilePath
-            )
-
-            const oriYamlFileResponse = yamlFile.response?.data
-            if (!oriYamlFileResponse) {
-              throw new Error('oriYamlFileResponse 不存在')
-            }
-            const remoteYamlFileUrl = oriYamlFileResponse[0]
-
-            const oriPGMFileResponse = pgmFile.response?.data
-            if (!oriPGMFileResponse) {
-              throw new Error('oriPGMFileResponse 不存在')
-            }
-            const remotePGMFileUrl = oriPGMFileResponse[0]
-            //ok, 参数都获取到了
-            console.log(
-              'jsonData为: ',
-              jsonData,
-              values.projectName,
-              remoteYamlFileUrl,
-              remotePGMFileUrl
-            )
-
-            const result = await createProject({ id: 3 })
-            console.log(result)
-          } catch (error) {
-            console.error('解析 YAML 文件出错: ', error)
-          }
+          return
         }
+        try {
+          const oriYamlFilePath = yamlFile.originFileObj?.path ?? ''
+          if (!oriYamlFilePath) {
+            throw new Error('originFileObj 不存在')
+          }
+          const jsonData = await window.electron.ipcRenderer.invoke(
+            'parse-yaml-file',
+            oriYamlFilePath
+          )
+          const remoteYamlFileUrl = yamlFile.response?.data[0] ?? ''
+          const remotePGMFileUrl = pgmFile.response?.data[0] ?? ''
+          if (!remoteYamlFileUrl || !remotePGMFileUrl) {
+            throw new Error('未获取到远程文件路径')
+          }
 
+          const dataSend = {
+            ...jsonData,
+            project_name: values.projectName,
+            pgm_url: remotePGMFileUrl,
+            png_url: remotePGMFileUrl.replace('.pgm', '.png'),
+            yaml_url: remoteYamlFileUrl
+          }
+
+          const result = await createProject(dataSend)
+          if (result.status === 'Success') {
+            message.success(`项目: ${values.projectName} 创建成功.`)
+            //添加成功后重新请求接口
+            reloadProjects()
+          } else {
+            message.error(`项目: ${values.projectName} 创建失败!`)
+          }
+        } catch (error) {
+          console.error('解析 YAML 文件出错: ', error)
+        }
         setOpen(false)
       })
       .catch((info) => {
@@ -149,7 +158,7 @@ const CreateProjectForm: React.FC<CollectionCreateFormProps> = ({ open, setOpen 
         </Form.Item>
         <Form.Item
           name="slamFiles"
-          label="SLAM相关资源文件"
+          label="SLAM相关资源文件(pgm+yaml)"
           rules={[{ required: true, message: '请选择yaml配置文件和pgm图片一起上传 ！' }]}
         >
           <Upload

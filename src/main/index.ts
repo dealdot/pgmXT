@@ -14,12 +14,12 @@ ipcMain.on('pintop-message', (event: Electron.IpcMainEvent, arg) => {
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1300,
-    height: 670,
+    width: 1460,
+    height: 900,
     // width: 1280, //mac 14'' width
     // height: 832, //mac 14'' height
-    minWidth: 1300,
-    minHeight: 670,
+    minWidth: 1460,
+    minHeight: 900,
     minimizable: true,
     maximizable: true,
     closable: true,
@@ -105,7 +105,7 @@ app.on('window-all-closed', () => {
 import parseYamlToJson from './yaml-parse'
 
 interface YamlStructure {
-  image?: string
+  image: string
   resolution: number
   origin: number[]
   negate: number
