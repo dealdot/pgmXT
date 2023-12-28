@@ -155,7 +155,14 @@ getTransform()
 3. mac 下 menu 的标题一直是 electron , 设置app.setName()和修改 Index.html 的 title 属性没用，develop 模式下没办法，生产环境时候可以指定名称, see:  https://github.com/electron/electron/issues/19892
 4. 现在使用暗黑模式，使用 const {token: { colorBgContainer, colorPrimary }} = theme.useToken() 在切换主题时貌似获取的 token 还是以前的,现在发现一个现象，我的理解是正确的，更改暗黑主题后对应的 colorBgContainer,colorPrimary 确实会变，只是在当前的 Layout 组件中不会变，而引入 一个子组件中就会发现它确实已经改变了,实践中发现 Header 会默认有个颜色（深蓝色跟 menu 部分一样),而 Footer 部分没有默认颜色，因此会自动跟随主题颜色变化，再分析一下为何在 Layout 当前组件中，Layout 组件渲染为何相关主题的颜色不会变化,而它的子主组件颜色会变化
 更多 token 值可见:  https://ant.design/docs/react/customize-theme-cn
+5. 现在使用 farbic 的一个 eraser 的功能，想着使用 cdn 引入，一方面 fabric 对应的 types 没有 earser 相关的类型提示，由于项目是 ts，类型提示非常多，另一方面弄了半天好像没生效，放弃，又想着使用原生的 canvas 的api 来操作 earser 的功能，但是弄了半天不起作用，并且和 fabric 一起用着非常难受，不好调试，所以还是选用社区版本 fabric-with-erasing ,这里使用的 fabric 是5.2版本，有一个问题就是调用 fabric.dispose()的时候有个错误，先这样吧.
+6. canvas 的宽和高初始化 dom 的时候就要指定，不指定默认是100*100，不能再动态的更新
 
+
+### undone
+1. 把橡皮擦的轮阔标出来，方便 earser 的时候观察
+2. 画的东西要和图片成为一组，以便于操作
+3. 
 
 ### skills get
 1. async 修饰的函数返回值是 promise, 主要用于异步操作, 封装网络请求 get / post 时返回的值就是 promise

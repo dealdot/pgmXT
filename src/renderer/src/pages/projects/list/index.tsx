@@ -73,7 +73,14 @@ const ProjectList: React.FC = () => {
               size="small"
               loading={false}
               style={{ width: 240 }}
-              cover={<img alt={item.project_name} src={`${baseAssetsURL}/${item.png_url}`} />}
+              cover={
+                <img
+                  width={240}
+                  height={147}
+                  alt={item.project_name}
+                  src={`${baseAssetsURL}/${item.png_url}`}
+                />
+              }
               actions={[
                 <a
                   key="delete"

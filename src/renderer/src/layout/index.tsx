@@ -86,6 +86,10 @@ const BasicLayout: React.FC = () => {
           components: {
             Layout: {
               headerHeight: 32
+            },
+            Slider: {
+              railBg: '#50E3C2',
+              railHoverBg: '#50E3C2'
             }
           },
           algorithm: currentTheme === ThemeMode.Light ? theme.defaultAlgorithm : theme.darkAlgorithm
@@ -97,7 +101,8 @@ const BasicLayout: React.FC = () => {
             trigger={null}
             collapsible
             collapsed={collapsed}
-            collapsedWidth={58}
+            //collapsedWidth={58}
+            collapsedWidth={0}
             width={200}
             className="sidebar"
             breakpoint="lg"
