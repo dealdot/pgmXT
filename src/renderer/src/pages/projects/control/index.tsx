@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { FloatButton, Slider } from 'antd'
 import {
   ColumnHeightOutlined,
@@ -9,11 +9,10 @@ import {
   ClearOutlined,
   BackwardOutlined,
   ForwardOutlined,
-  CloseOutlined,
   DownloadOutlined
 } from '@ant-design/icons'
 import { getProjectById, getCurrentPGMImageSize, getPGMImage } from '@renderer/api/project'
-import type { ProjectTableColumns, PGMSize } from '@renderer/api/project/type'
+//import type { ProjectTableColumns } from '@renderer/api/project/type'
 import { fabric } from 'fabric-with-erasing'
 //定义类型,直接引入好像有问题，可能是 FloatButton 还没处理，因为是新组件
 const pgmXTControl: React.FC = () => {
@@ -22,17 +21,28 @@ const pgmXTControl: React.FC = () => {
   const projectId = queryParams.get('id') ?? ''
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null)
   const canvasEl = useRef<HTMLCanvasElement>(null)
-  const [project, setProject] = useState<ProjectTableColumns>()
-  const [isErasing, setIsEarsing] = useState(false)
+  const lineRef = useRef<fabric.Line | null>(null)
+  //const [project, setProject] = useState<ProjectTableColumns>()
+  // const [isErasing, setIsEarsing] = useState(false)
+  //const [isDrawing, setIsDrawing] = useState(false)
+  //const isDrawingRef = useRef(isDrawing)
   const [brushSize, setBrushSize] = useState(10)
+  const brushSizeRef = useRef(brushSize)
   const [showSlider, setShowSlider] = useState(false)
   const [btnClicked, setBtnClicked] = useState('control')
-  //撤销
-  const [undoStack, setUndoStack] = useState<fabric.Object[]>([])
-  //重做
-  const [redoStack, setRedoStack] = useState<fabric.Object[]>([])
+  const btnClickedRef = useRef(btnClicked)
+  //定义canvasStateStack 记录撤销重做的操作
+  const [canvasStateStack, setCanvasStateStack] = useState<string[]>([])
+  //定义canvasStateIndex 记录当前画布的状态
+  const [stateStackIndex, setStateStackIndex] = useState<number>(0)
+  //当前是否进行撤销或重做操作
+  const [isRedoing, setIsRedoing] = useState<boolean>(false)
+  //设置 renderTimer 避免性能问题
+  const recordTimerRef = useRef<NodeJS.Timeout | null>(null)
   const canvaWidth = 1180
   const canvasHeight = 760
+  let isDrawing = false
+  let group
 
   useEffect(() => {
     //useEffect 在 dom 加载完成调用，因此要放到 useEffect 里
@@ -52,19 +62,12 @@ const pgmXTControl: React.FC = () => {
     //canvas.setOverlayColor('rgba(0,0,255,0.4)', canvas.renderAll.bind(canvas))
     setCanvas(canvas)
 
-    //监听鼠标事件
-    canvas.on('mouse:up', () => {
-      const objects = canvas.getObjects()
-      console.log('当前画面元素:', objects)
-      const group = new fabric.Group(objects)
-      canvas.clear()
-      canvas.add(group)
-      canvas.setBackgroundColor('white', canvas.renderAll.bind(canvas))
-      canvas.renderAll()
-      canvas.isDrawingMode = false
-      //重置选中的 FloatButton
-      setBtnClicked('control')
-    })
+    //init canvasStateStack 因为我想让 pgm 图片一直保持在 canvas 上，不参考 undo/redo 操作，所以这里不需要init操作了
+    //setCanvasStateStack((oldStateArr) => [...oldStateArr, JSON.stringify(canvas)])
+
+    //setCanvasStateStack([...canvasStateStack, JSON.stringify(canvas)])
+    //canvasStateStack.push(JSON.stringify(canvas))
+
     //组件加载时执行一次
     const fetchData = async () => {
       if (projectId) {
@@ -76,7 +79,7 @@ const pgmXTControl: React.FC = () => {
           'pgm_url' in projectDetail.data
         ) {
           console.log(projectDetail.data)
-          setProject(projectDetail.data as ProjectTableColumns)
+          //setProject(projectDetail.data as ProjectTableColumns)
 
           const pgmImageDataBuffer = await getPGMImage(projectDetail.data.pgm_url)
           const pgmImageData = new Uint8Array(pgmImageDataBuffer) //这样转换后才是二进制,因为是从后端返回的
@@ -93,18 +96,6 @@ const pgmXTControl: React.FC = () => {
         }
       }
     }
-    //监听canvas新增事件
-    canvas.on('object:added', () => {
-      saveCanvasState(canvas)
-    })
-    //监听canvas修改事件
-    canvas.on('object:modified', () => {
-      saveCanvasState(canvas)
-    })
-    //监听canvas删除事件
-    // canvas.on('object:removed', () => {
-    //   saveCanvasState(canvas)
-    // })
     fetchData()
     return () => {
       //fabric-with-erasing这个库dispose这里会报错,使用 clear
@@ -112,6 +103,175 @@ const pgmXTControl: React.FC = () => {
       canvas.clear()
     }
   }, [])
+
+  useEffect(() => {
+    if (canvas) {
+      handleMouseUp()
+      handleMouseMove()
+      handleMouseDown()
+      //handleCanvasAdd()
+      //handleCanvasModify()
+    }
+  }, [canvas])
+
+  //跟踪 btnClicked 的值
+  useEffect(() => {
+    btnClickedRef.current = btnClicked
+    brushSizeRef.current = brushSize
+  }, [btnClicked, brushSize])
+
+  //监听 canvas 的 after:render 事件,直接写到 useEffect里逻辑更简单
+  useEffect(() => {
+    //点击 undo/redo按钮的时候也会触发after:render 回调
+    const handerAfterRender = () => {
+      console.log('这里看看是否进来了', isRedoing, canvas)
+      if (!isRedoing) {
+        if (recordTimerRef.current) {
+          clearTimeout(recordTimerRef.current)
+        }
+        recordTimerRef.current = setTimeout(() => {
+          //canvas.getObjects().length 开始是1是那个图片，操作后也一直是1,因为 Pgm图片和操作的其它元素在一个组
+          console.log('pgm 图片加载进来了,当前画布对象个数: ', canvas.getObjects().length)
+          canvas.forEachObject((object) => {
+            console.log('对象', object)
+          })
+          //由于这里 setCanvasStateStack会频繁调用，因此使用 upater function 的方法更保险,直接更新确实会遇到问题
+          setCanvasStateStack((preStateArr) => [...preStateArr, JSON.stringify(canvas)])
+          setStateStackIndex((preIndex) => preIndex + 1)
+
+          //setCanvasStateStack([...canvasStateStack, JSON.stringify(canvas)])
+          //setStateStackIndex(stateStackIndex + 1)
+          console.log([...canvasStateStack, JSON.stringify(canvas)])
+        }, 100)
+      } else {
+        setIsRedoing(false)
+      }
+    }
+    if (canvas) {
+      canvas.on('after:render', handerAfterRender)
+    }
+    return () => {
+      if (canvas) {
+        canvas.off('after:render', handerAfterRender)
+      }
+    }
+  }, [canvas, isRedoing])
+
+  const groupObjects = () => {
+    const objects = canvas.getObjects()
+    console.log('当前画面元素:', objects)
+    group = new fabric.Group(objects, { selectable: true })
+    canvas.clear()
+    canvas.add(group)
+    canvas.setBackgroundColor('white', canvas.renderAll.bind(canvas))
+    canvas.renderAll()
+    canvas.isDrawingMode = false
+  }
+  const handleMouseUp = () => {
+    if (canvas) {
+      //监听鼠标事件
+      canvas.on('mouse:up', () => {
+        isDrawing = false
+
+        canvas.forEachObject((object) => {
+          object.selectable = true
+          object.evented = true
+        })
+        //if (btnClickedRef.current !== 'drawLine') groupObjects()
+        groupObjects()
+        //重置选中的 FloatButton
+        setBtnClicked('control')
+        //设置鼠标样式
+        canvas.defaultCursor = 'default'
+      })
+    }
+  }
+  const handleMouseMove = () => {
+    canvas.on('mouse:move', (o: fabric.Ievent) => {
+      if (!isDrawing) return
+      if (canvas && btnClickedRef.current === 'drawLine') {
+        console.log('移动中...')
+        const pointer = canvas.getPointer(o.e)
+        console.log(pointer, lineRef.current)
+        lineRef.current.set({ x2: pointer.x, y2: pointer.y })
+        canvas.renderAll()
+      }
+    })
+  }
+  const handleMouseDown = () => {
+    if (canvas) {
+      canvas.on('mouse:down', (o: fabric.Ievent) => {
+        isDrawing = true
+        //group.selectable = false
+        //group.evented = false
+        if (btnClickedRef.current === 'drawLine') {
+          canvas.forEachObject((object) => {
+            console.log('对象', object)
+            object.selectable = false
+            object.evented = false
+          })
+          console.log('我在这儿down....')
+          const pointer = canvas.getPointer(o.e)
+          const points = [pointer.x, pointer.y, pointer.x, pointer.y]
+          lineRef.current = new fabric.Line(points, {
+            strokeWidth: brushSizeRef.current,
+            fill: 'black',
+            stroke: 'black',
+            originX: 'center',
+            originY: 'center',
+            selectable: false
+          })
+          canvas.add(lineRef.current)
+          canvas.bringToFront(lineRef.current)
+        }
+      })
+    }
+  }
+
+  /*
+  const handleCanvasAdd = () => {
+    //监听canvas新增事件
+    if (canvas) {
+      canvas.on('object:added', () => {
+        saveCanvasState(canvas)
+      })
+    }
+
+    //监听canvas删除事件
+    // canvas.on('object:removed', () => {
+    //   saveCanvasState(canvas)
+    // })
+  }
+  */
+
+  // const handleCanvasModify = () => {
+  //   //监听canvas修改事件
+  //   if (canvas) {
+  //     canvas.on('object:modified', () => {
+  //       saveCanvasState(canvas)
+  //     })
+  //   }
+  // }
+
+  /*
+  const handleCanvasAdd = () => {
+    //监听canvas新增事件
+    if (canvas) {
+      canvas.on('after:render', () => {
+        if (!isRedoingRef.current) {
+          if (recordTimerRef.current) {
+            clearTimeout(recordTimerRef.current)
+            setRecordTimer(null)
+          }
+          recordTimerRef.current = setTimeout(() => {
+            setCanvasStateStack((oldStateArr) => [...oldStateArr, JSON.stringify(canvas)])
+            setStateStackIndex(stateStackIndex + 1)
+          }, 100)
+        }
+      })
+    }
+  }
+*/
 
   const zoomFunction = (canvas: fabric.Canvas) => {
     // 处理鼠标滚轮事件以缩放图像
@@ -179,8 +339,8 @@ const pgmXTControl: React.FC = () => {
     })
   }
 
-  const setToDraw = () => {
-    setIsEarsing(false)
+  const setToBrushDraw = () => {
+    console.log('我在这儿....')
     //设置绘制模式
     canvas.isDrawingMode = true
     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas)
@@ -196,10 +356,21 @@ const pgmXTControl: React.FC = () => {
     canvas.freeDrawingBrush.limitedToCanvasSize = false
   }
   //draw line
-  const setToDrawLine = () => {}
+  const setToDrawLine = () => {
+    canvas.isDrawingMode = false
+    canvas.selection = false
+    canvas.defaultCursor = 'crosshair' //默认光标改成十字
+    canvas.forEachObject((object) => {
+      console.log('对象', object)
+      object.selectable = false
+      object.evented = false
+    })
+    if (canvas) {
+      //canvas.style.cursor = 'default'
+    }
+  }
 
   const setToErase = () => {
-    setIsEarsing(true)
     canvas.isDrawingMode = true
     canvas.freeDrawingBrush = new fabric.EraserBrush(canvas)
     //  optional
@@ -212,53 +383,44 @@ const pgmXTControl: React.FC = () => {
     canvas.freeDrawingBrush.strokeLineCap = 'square'
     canvas.freeDrawingBrush.width = brushSize
   }
-  //保存当前 canvas 画布状态
-  const saveCanvasState = (canvas: fabric.Canvas) => {
-    if (canvas) {
-      const currentState = canvas.toJSON()
-      console.log('当前 canvas 状态', currentState)
-      setUndoStack([...undoStack, currentState.objects])
-      setRedoStack([])
-    }
-  }
+
   const setToControl = () => {
     canvas.isDrawingMode = false
   }
-  //undo function
-  const undo = () => {
-    if (undoStack.length === 0) return
 
-    const newUndoStack = [...undoStack]
-    const currentState = newUndoStack.pop()
-    console.log('undo....', currentState)
-    setUndoStack(newUndoStack)
+  //recordCanvasState function
+  //flag: number = 0 这样 flag 就是可选参数
+  //或者使用非空断言 加个 !
+  //或者手动判断 flag是否是 undefined
+  const redoAndUndoFunction = (flag?: number) => {
+    if (typeof flag === 'undefined') {
+      throw new Error('flag is undefined')
+    }
 
-    setRedoStack([...redoStack, currentState])
-
-    canvas.loadFromJSON(undoStack[undoStack.length - 1] || {}, canvas.renderAll.bind(canvas))
-  }
-
-  //redo function
-  const redo = () => {
-    console.log('redo111....,', canvas)
-    if (redoStack.length === 0) return
-    console.log('redo222....')
-    const newRedoStack = [...redoStack]
-    const currentState = newRedoStack.pop()
-    setRedoStack(newRedoStack)
-
-    setUndoStack([...undoStack, currentState])
-    console.log('redo....')
-    canvas.loadFromJSON(currentState, canvas.renderAll.bind(canvas))
+    setIsRedoing(true)
+    const stateIdx = stateStackIndex + flag
+    console.log('打印: ', canvasStateStack, stateStackIndex, stateIdx)
+    if (stateIdx < 0) return
+    if (stateIdx >= canvasStateStack.length) return
+    if (canvasStateStack[stateIdx]) {
+      canvas.loadFromJSON(canvasStateStack[stateIdx])
+      // if (canvas.getObjects().length > 0) {
+      //   canvas.getObjects().forEach((item) => {
+      //     item.set('selectable', false)
+      //   })
+      // }
+      setStateStackIndex(stateIdx)
+    }
   }
 
   //clear function
-  const clearCanvas = () => {
-    const children = canvas.getObjects()
-    if (children.length > 0) {
-      canvas.remove(...children)
-    }
-  }
+  // const clearCanvas = () => {
+  //   const children = canvas.getObjects()
+  //   if (children.length > 0) {
+  //     canvas.remove(...children)
+  //   }
+  // }
+
   //export function
   //导出注意
   //1. 图片的尺寸要和 canvas 保持一样
@@ -352,7 +514,7 @@ const pgmXTControl: React.FC = () => {
     pgmLink.click()
     document.body.removeChild(pgmLink)
   }
-  const exportPgmFullScreen = () => {
+  const exportCanvasFullScreen = () => {
     const img = canvas.getObjects()[0]
     const zoom = canvas.getZoom()
     const imgWidth = img.getScaledWidth()
@@ -402,7 +564,7 @@ const pgmXTControl: React.FC = () => {
       id: 'draw',
       icon: <EditOutlined />,
       tooltip: '任意画笔',
-      onClick: setToDraw
+      onClick: setToBrushDraw
     },
     {
       id: 'drawLine',
@@ -420,20 +582,20 @@ const pgmXTControl: React.FC = () => {
       id: 'undo',
       icon: <BackwardOutlined />,
       tooltip: '撤销',
-      onClick: undo
+      onClick: redoAndUndoFunction
     },
     {
       id: 'redo',
       icon: <ForwardOutlined />,
       tooltip: '重做',
-      onClick: redo
+      onClick: redoAndUndoFunction
     },
-    {
-      id: 'clear',
-      icon: <CloseOutlined />,
-      tooltip: '清空画布',
-      onClick: clearCanvas
-    },
+    // {
+    //   id: 'clear',
+    //   icon: <CloseOutlined />,
+    //   tooltip: '清空画布',
+    //   onClick: clearCanvas
+    // },
     {
       id: 'export',
       icon: <DownloadOutlined />,
@@ -489,7 +651,15 @@ const pgmXTControl: React.FC = () => {
               type={btnClicked === id ? 'primary' : 'default'}
               onClick={() => {
                 setBtnClicked(id)
-                onClick()
+                if (onClick.length === 0) {
+                  onClick()
+                } else {
+                  if (id === 'undo') {
+                    onClick(-1)
+                  } else if (id === 'redo') {
+                    onClick(1)
+                  }
+                }
               }}
               icon={icon}
               tooltip={tooltip}

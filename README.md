@@ -10,13 +10,13 @@
 ### Install
 
 ```bash
-$ npm install
+$ pnpm install
 ```
 
 ### Development
 
 ```bash
-$ npm run dev
+$ pnpm run dev
 ```
 
 ### Build
