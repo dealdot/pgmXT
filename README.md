@@ -162,7 +162,19 @@ getTransform()
 ### undone
 1. 把橡皮擦的轮阔标出来，方便 earser 的时候观察
 2. 画的东西要和图片成为一组，以便于操作
-3. 
+3. openvpn内网穿透
+4. frp内网穿透
+
+二期可参考的demo(from 浏览器标签)
+
+https://blog.csdn.net/lxzysx/article/details/105346419
+https://space.bilibili.com/688437974/channel/collectiondetail?sid=1089662
+http://fabricjs.com/docs/fabric.js.html
+https://blog.csdn.net/qq_15204179/category_11332796_3.html
+https://blog.csdn.net/qq_15204179/article/details/121101566
+https://blog.csdn.net/qq_15204179/article/details/121870786
+https://blog.csdn.net/qq_15204179/article/details/129321542
+
 
 ### skills get
 1. async 修饰的函数返回值是 promise, 主要用于异步操作, 封装网络请求 get / post 时返回的值就是 promise
