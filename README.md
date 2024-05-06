@@ -5,7 +5,9 @@ SLAM 地图编辑工具(.pgm 格式），SLAM部署工具
 **pgm editor for SLAM**
 
 前端技术栈: vite + electron + react + tailwindcss + typescript
+
 后端技术栈：express.js + sqlite3数据库
+
 后端仓库: [pgmXT-backend](https://github.com/dealdot/pgmXT-backend) 
 
 screenshots:
