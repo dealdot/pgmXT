@@ -31,3 +31,4 @@ out
 *.log*
 # local env files
 .env*
+README-not-open.md
